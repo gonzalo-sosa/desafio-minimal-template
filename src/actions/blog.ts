@@ -1,18 +1,29 @@
-import type { SWRConfiguration } from 'swr';
 import type { IPostItem } from 'src/types/blog';
+import type { AxiosRequestConfig } from 'axios';
 
-import useSWR from 'swr';
 import { useMemo } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 
 // ----------------------------------------------------------------------
 
-const swrOptions: SWRConfiguration = {
-  revalidateIfStale: false,
-  revalidateOnFocus: false,
-  revalidateOnReconnect: false,
+// const swrOptions: SWRConfiguration = {
+//   revalidateIfStale: false,
+//   revalidateOnFocus: false,
+//   revalidateOnReconnect: false,
+// };
+
+// TODO: añadir types de useQuery
+const queryOptions = {
+  refetchOnWindowFocus: false,
+  refetchOnMount: false,
+  refetchOnReconnect: false,
 };
+
+// ----------------------------------------------------------------------
+
+type AxiosURL = string | [string, AxiosRequestConfig];
 
 // ----------------------------------------------------------------------
 
@@ -23,7 +34,16 @@ type PostsData = {
 export function useGetPosts() {
   const url = endpoints.post.list;
 
-  const { data, isLoading, error, isValidating } = useSWR<PostsData>(url, fetcher, swrOptions);
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<PostsData, Error>({
+    queryKey: ['posts'],
+    queryFn: () => fetcher<PostsData>(url),
+    ...queryOptions,
+  });
 
   const memoizedValue = useMemo(
     () => ({
@@ -46,9 +66,18 @@ type PostData = {
 };
 
 export function useGetPost(title: string) {
-  const url = title ? [endpoints.post.details, { params: { title } }] : '';
+  const url: AxiosURL = title ? [endpoints.post.details, { params: { title } }] : '';
 
-  const { data, isLoading, error, isValidating } = useSWR<PostData>(url, fetcher, swrOptions);
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<PostData, Error>({
+    queryKey: ['post', title],
+    queryFn: () => fetcher<PostData>(url),
+    ...queryOptions,
+  });
 
   const memoizedValue = useMemo(
     () => ({
@@ -70,13 +99,18 @@ type LatestPostsData = {
 };
 
 export function useGetLatestPosts(title: string) {
-  const url = title ? [endpoints.post.latest, { params: { title } }] : '';
+  const url: AxiosURL = title ? [endpoints.post.latest, { params: { title } }] : '';
 
-  const { data, isLoading, error, isValidating } = useSWR<LatestPostsData>(
-    url,
-    fetcher,
-    swrOptions
-  );
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<LatestPostsData, Error>({
+    queryKey: ['latestPosts', title],
+    queryFn: () => fetcher<LatestPostsData>(url),
+    ...queryOptions,
+  });
 
   const memoizedValue = useMemo(
     () => ({
@@ -99,11 +133,18 @@ type SearchResultsData = {
 };
 
 export function useSearchPosts(query: string) {
-  const url = query ? [endpoints.post.search, { params: { query } }] : '';
+  const url: AxiosURL = query ? [endpoints.post.search, { params: { query } }] : '';
 
-  const { data, isLoading, error, isValidating } = useSWR<SearchResultsData>(url, fetcher, {
-    ...swrOptions,
-    keepPreviousData: true,
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<SearchResultsData, Error>({
+    queryKey: ['searchPostsResults', query],
+    queryFn: () => fetcher<SearchResultsData>(url),
+    placeholderData: keepPreviousData,
+    ...queryOptions,
   });
 
   const memoizedValue = useMemo(

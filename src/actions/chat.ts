@@ -1,9 +1,9 @@
-import type { SWRConfiguration } from 'swr';
+import type { AxiosRequestConfig } from 'axios';
 import type { IChatMessage, IChatParticipant, IChatConversation } from 'src/types/chat';
 
 import { useMemo } from 'react';
 import { keyBy } from 'es-toolkit';
-import useSWR, { mutate } from 'swr';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import axios, { fetcher, endpoints } from 'src/lib/axios';
 
@@ -13,11 +13,16 @@ const enableServer = false;
 
 const CHART_ENDPOINT = endpoints.chat;
 
-const swrOptions: SWRConfiguration = {
-  revalidateIfStale: enableServer,
-  revalidateOnFocus: enableServer,
-  revalidateOnReconnect: enableServer,
+// TODO: añadir types de useQuery
+const queryOptions = {
+  refetchOnWindowFocus: enableServer,
+  refetchOnMount: enableServer,
+  refetchOnReconnect: enableServer,
 };
+
+// ----------------------------------------------------------------------
+
+type AxiosURL = string | [string, AxiosRequestConfig];
 
 // ----------------------------------------------------------------------
 
@@ -26,9 +31,18 @@ type ContactsData = {
 };
 
 export function useGetContacts() {
-  const url = [CHART_ENDPOINT, { params: { endpoint: 'contacts' } }];
+  const url: AxiosURL = [CHART_ENDPOINT, { params: { endpoint: 'contacts' } }];
 
-  const { data, isLoading, error, isValidating } = useSWR<ContactsData>(url, fetcher, swrOptions);
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<ContactsData>({
+    queryKey: ['contacts'],
+    queryFn: () => fetcher<ContactsData>(url),
+    ...queryOptions,
+  });
 
   const memoizedValue = useMemo(
     () => ({
@@ -44,20 +58,25 @@ export function useGetContacts() {
   return memoizedValue;
 }
 
-// ----------------------------------------------------------------------
+// #region useGetConversations
 
 type ConversationsData = {
   conversations: IChatConversation[];
 };
 
 export function useGetConversations() {
-  const url = [CHART_ENDPOINT, { params: { endpoint: 'conversations' } }];
+  const url: AxiosURL = [CHART_ENDPOINT, { params: { endpoint: 'conversations' } }];
 
-  const { data, isLoading, error, isValidating } = useSWR<ConversationsData>(
-    url,
-    fetcher,
-    swrOptions
-  );
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<ConversationsData>({
+    queryKey: ['conversations'],
+    queryFn: () => fetcher<ConversationsData>(url),
+    ...queryOptions,
+  });
 
   const memoizedValue = useMemo(() => {
     const byId = data?.conversations.length ? keyBy(data.conversations, (option) => option.id) : {};
@@ -75,22 +94,29 @@ export function useGetConversations() {
   return memoizedValue;
 }
 
-// ----------------------------------------------------------------------
+// #endregion
+
+// #region useGetConversation
 
 type ConversationData = {
   conversation: IChatConversation;
 };
 
 export function useGetConversation(conversationId: string) {
-  const url = conversationId
+  const url: AxiosURL = conversationId
     ? [CHART_ENDPOINT, { params: { conversationId, endpoint: 'conversation' } }]
     : '';
 
-  const { data, isLoading, error, isValidating } = useSWR<ConversationData>(
-    url,
-    fetcher,
-    swrOptions
-  );
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<ConversationData>({
+    queryKey: ['conversation', conversationId],
+    queryFn: () => fetcher<ConversationData>(url),
+    ...queryOptions,
+  });
 
   const memoizedValue = useMemo(
     () => ({
@@ -106,115 +132,102 @@ export function useGetConversation(conversationId: string) {
   return memoizedValue;
 }
 
-// ----------------------------------------------------------------------
+// #endregion
 
-export async function sendMessage(conversationId: string, messageData: IChatMessage) {
-  const conversationsUrl = [CHART_ENDPOINT, { params: { endpoint: 'conversations' } }];
+// #region useChatMutations
 
-  const conversationUrl = [
-    CHART_ENDPOINT,
-    { params: { conversationId, endpoint: 'conversation' } },
-  ];
+export function useChatMutations() {
+  const queryClient = useQueryClient();
 
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { conversationId, messageData };
-    await axios.put(CHART_ENDPOINT, data);
-  }
-
-  /**
-   * Work in local
-   */
-  mutate(
-    conversationUrl,
-    (currentData) => {
-      const currentConversation: IChatConversation = currentData.conversation;
-
-      const conversation = {
-        ...currentConversation,
-        messages: [...currentConversation.messages, messageData],
-      };
-
-      return { ...currentData, conversation };
+  const sendMessageMutation = useMutation({
+    mutationFn: async ({
+      conversationId,
+      messageData,
+    }: {
+      conversationId: string;
+      messageData: IChatMessage;
+    }) => {
+      if (enableServer) {
+        await axios.put(CHART_ENDPOINT, { conversationId, messageData });
+      }
+      return { conversationId, messageData };
     },
-    false
-  );
+    onSuccess: ({ conversationId, messageData }) => {
+      // Actualizar la conversación individual
+      queryClient.setQueryData<ConversationData>(['conversation', conversationId], (old) => {
+        if (!old)
+          return {
+            conversation: {
+              id: conversationId,
+              messages: [messageData],
+              type: '',
+              unreadCount: 0,
+              participants: [],
+            },
+          };
 
-  mutate(
-    conversationsUrl,
-    (currentData) => {
-      const currentConversations: IChatConversation[] = currentData.conversations;
+        return {
+          conversation: {
+            ...old.conversation,
+            messages: [...old.conversation.messages, messageData],
+          },
+        };
+      });
 
-      const conversations: IChatConversation[] = currentConversations.map(
-        (conversation: IChatConversation) =>
-          conversation.id === conversationId
-            ? { ...conversation, messages: [...conversation.messages, messageData] }
-            : conversation
-      );
-
-      return { ...currentData, conversations };
+      // Actualizar la lista de conversaciones
+      queryClient.setQueryData<ConversationsData>(['conversations'], (old) => ({
+        conversations:
+          old?.conversations.map((conversation) =>
+            conversation.id === conversationId
+              ? { ...conversation, messages: [...conversation.messages, messageData] }
+              : conversation
+          ) || [],
+      }));
     },
-    false
-  );
+  });
+
+  const createConversationMutation = useMutation({
+    mutationFn: async (conversationData: IChatConversation) => {
+      if (enableServer) {
+        const res = await axios.post(CHART_ENDPOINT, { conversationData });
+        return res.data;
+      }
+      return conversationData;
+    },
+    onSuccess: (newConversation) => {
+      queryClient.setQueryData<ConversationsData>(['conversations'], (old) => ({
+        conversations: [...(old?.conversations || []), newConversation],
+      }));
+    },
+  });
+
+  const clickConversationMutation = useMutation({
+    mutationFn: async (conversationId: string) => {
+      if (enableServer) {
+        await axios.get(CHART_ENDPOINT, {
+          params: { conversationId, endpoint: 'mark-as-seen' },
+        });
+      }
+      return conversationId;
+    },
+    onSuccess: (conversationId) => {
+      queryClient.setQueryData<ConversationsData>(['conversations'], (old) => ({
+        conversations:
+          old?.conversations.map((conversation) =>
+            conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
+          ) || [],
+      }));
+    },
+  });
+
+  return {
+    sendMessage: sendMessageMutation.mutateAsync,
+    createConversation: createConversationMutation.mutateAsync,
+    clickConversation: clickConversationMutation.mutateAsync,
+    isSendingMessage: sendMessageMutation.isPending,
+    isCreatingConversation: createConversationMutation.isPending,
+    isClickingConversation: clickConversationMutation.isPending,
+  };
 }
 
-// ----------------------------------------------------------------------
-
-export async function createConversation(conversationData: IChatConversation) {
-  const url = [CHART_ENDPOINT, { params: { endpoint: 'conversations' } }];
-
-  /**
-   * Work on server
-   */
-  const data = { conversationData };
-  const res = await axios.post(CHART_ENDPOINT, data);
-
-  /**
-   * Work in local
-   */
-
-  mutate(
-    url,
-    (currentData) => {
-      const currentConversations: IChatConversation[] = currentData.conversations;
-
-      const conversations: IChatConversation[] = [...currentConversations, conversationData];
-
-      return { ...currentData, conversations };
-    },
-    false
-  );
-
-  return res.data;
-}
-
-// ----------------------------------------------------------------------
-
-export async function clickConversation(conversationId: string) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    await axios.get(CHART_ENDPOINT, { params: { conversationId, endpoint: 'mark-as-seen' } });
-  }
-
-  /**
-   * Work in local
-   */
-
-  mutate(
-    [CHART_ENDPOINT, { params: { endpoint: 'conversations' } }],
-    (currentData) => {
-      const currentConversations: IChatConversation[] = currentData.conversations;
-
-      const conversations = currentConversations.map((conversation: IChatConversation) =>
-        conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
-      );
-
-      return { ...currentData, conversations };
-    },
-    false
-  );
-}
+// #endregion

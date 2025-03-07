@@ -1,8 +1,7 @@
-import type { SWRConfiguration } from 'swr';
 import type { ICalendarEvent } from 'src/types/calendar';
 
 import { useMemo } from 'react';
-import useSWR, { mutate } from 'swr';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import axios, { fetcher, endpoints } from 'src/lib/axios';
 
@@ -12,24 +11,30 @@ const enableServer = false;
 
 const CALENDAR_ENDPOINT = endpoints.calendar;
 
-const swrOptions: SWRConfiguration = {
-  revalidateIfStale: enableServer,
-  revalidateOnFocus: enableServer,
-  revalidateOnReconnect: enableServer,
+// TODO: añadir types de useQuery
+const queryOptions = {
+  refetchOnWindowFocus: enableServer,
+  refetchOnMount: enableServer,
+  refetchOnReconnect: enableServer,
 };
 
-// ----------------------------------------------------------------------
+// #region getEvents
 
 type EventsData = {
   events: ICalendarEvent[];
 };
 
 export function useGetEvents() {
-  const { data, isLoading, error, isValidating } = useSWR<EventsData>(
-    CALENDAR_ENDPOINT,
-    fetcher,
-    swrOptions
-  );
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<EventsData>({
+    queryKey: ['events'],
+    queryFn: () => fetcher<EventsData>(CALENDAR_ENDPOINT),
+    ...queryOptions,
+  });
 
   const memoizedValue = useMemo(() => {
     const events = data?.events.map((event) => ({ ...event, textColor: event.color }));
@@ -46,88 +51,64 @@ export function useGetEvents() {
   return memoizedValue;
 }
 
-// ----------------------------------------------------------------------
+// #endregion
 
-export async function createEvent(eventData: ICalendarEvent) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { eventData };
-    await axios.post(CALENDAR_ENDPOINT, data);
-  }
+// #region useMutations
 
-  /**
-   * Work in local
-   */
+export function useEventMutations() {
+  const queryClient = useQueryClient();
 
-  mutate(
-    CALENDAR_ENDPOINT,
-    (currentData) => {
-      const currentEvents: ICalendarEvent[] = currentData?.events;
-
-      const events = [...currentEvents, eventData];
-
-      return { ...currentData, events };
+  const createMutation = useMutation({
+    mutationFn: async (eventData: ICalendarEvent) => {
+      if (enableServer) {
+        await axios.post(CALENDAR_ENDPOINT, { eventData });
+      }
+      return eventData;
     },
-    false
-  );
-}
-
-// ----------------------------------------------------------------------
-
-export async function updateEvent(eventData: Partial<ICalendarEvent>) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { eventData };
-    await axios.put(CALENDAR_ENDPOINT, data);
-  }
-
-  /**
-   * Work in local
-   */
-
-  mutate(
-    CALENDAR_ENDPOINT,
-    (currentData) => {
-      const currentEvents: ICalendarEvent[] = currentData?.events;
-
-      const events = currentEvents.map((event) =>
-        event.id === eventData.id ? { ...event, ...eventData } : event
-      );
-
-      return { ...currentData, events };
+    onSuccess: (eventData) => {
+      queryClient.setQueryData<EventsData>(['events'], (old) => ({
+        events: [...(old?.events || []), eventData],
+      }));
     },
-    false
-  );
-}
+  });
 
-// ----------------------------------------------------------------------
-
-export async function deleteEvent(eventId: string) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { eventId };
-    await axios.patch(CALENDAR_ENDPOINT, data);
-  }
-
-  /**
-   * Work in local
-   */
-
-  mutate(
-    CALENDAR_ENDPOINT,
-    (currentData) => {
-      const currentEvents: ICalendarEvent[] = currentData?.events;
-
-      const events = currentEvents.filter((event) => event.id !== eventId);
-
-      return { ...currentData, events };
+  const updateMutation = useMutation({
+    mutationFn: async (eventData: Partial<ICalendarEvent>) => {
+      if (enableServer) {
+        await axios.put(CALENDAR_ENDPOINT, { eventData });
+      }
+      return eventData;
     },
-    false
-  );
+    onSuccess: (eventData) => {
+      queryClient.setQueryData<EventsData>(['events'], (old) => ({
+        events:
+          old?.events.map((event) =>
+            event.id === eventData.id ? { ...event, ...eventData } : event
+          ) || [],
+      }));
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      if (enableServer) {
+        await axios.patch(CALENDAR_ENDPOINT, { eventId });
+      }
+      return eventId;
+    },
+    onSuccess: (eventId) => {
+      queryClient.setQueryData<EventsData>(['events'], (old) => ({
+        events: old?.events.filter((event) => event.id !== eventId) || [],
+      }));
+    },
+  });
+
+  return {
+    createEvent: createMutation.mutateAsync,
+    updateEvent: updateMutation.mutateAsync,
+    deleteEvent: deleteMutation.mutateAsync,
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+  };
 }

@@ -1,18 +1,29 @@
-import type { SWRConfiguration } from 'swr';
+import type { AxiosRequestConfig } from 'axios';
 import type { IProductItem } from 'src/types/product';
 
-import useSWR from 'swr';
 import { useMemo } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 
 // ----------------------------------------------------------------------
 
-const swrOptions: SWRConfiguration = {
-  revalidateIfStale: false,
-  revalidateOnFocus: false,
-  revalidateOnReconnect: false,
+// const swrOptions: SWRConfiguration = {
+//   revalidateIfStale: false,
+//   revalidateOnFocus: false,
+//   revalidateOnReconnect: false,
+// };
+
+// TODO: añadir types de useQuery
+const queryOptions = {
+  refetchOnWindowFocus: false,
+  refetchOnMount: false,
+  refetchOnReconnect: false,
 };
+
+// ----------------------------------------------------------------------
+
+type AxiosURL = string | [string, AxiosRequestConfig];
 
 // ----------------------------------------------------------------------
 
@@ -23,7 +34,16 @@ type ProductsData = {
 export function useGetProducts() {
   const url = endpoints.product.list;
 
-  const { data, isLoading, error, isValidating } = useSWR<ProductsData>(url, fetcher, swrOptions);
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<ProductsData>({
+    queryKey: ['products'],
+    queryFn: () => fetcher<ProductsData>(url),
+    ...queryOptions,
+  });
 
   const memoizedValue = useMemo(
     () => ({
@@ -46,9 +66,18 @@ type ProductData = {
 };
 
 export function useGetProduct(productId: string) {
-  const url = productId ? [endpoints.product.details, { params: { productId } }] : '';
+  const url: AxiosURL = productId ? [endpoints.product.details, { params: { productId } }] : '';
 
-  const { data, isLoading, error, isValidating } = useSWR<ProductData>(url, fetcher, swrOptions);
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<ProductData>({
+    queryKey: ['product', productId],
+    queryFn: () => fetcher<ProductData>(url),
+    ...queryOptions,
+  });
 
   const memoizedValue = useMemo(
     () => ({
@@ -70,11 +99,18 @@ type SearchResultsData = {
 };
 
 export function useSearchProducts(query: string) {
-  const url = query ? [endpoints.product.search, { params: { query } }] : '';
+  const url: AxiosURL = query ? [endpoints.product.search, { params: { query } }] : '';
 
-  const { data, isLoading, error, isValidating } = useSWR<SearchResultsData>(url, fetcher, {
-    ...swrOptions,
-    keepPreviousData: true,
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<SearchResultsData>({
+    queryKey: ['searchProductsResults', query],
+    queryFn: () => fetcher<SearchResultsData>(url),
+    placeholderData: keepPreviousData,
+    ...queryOptions,
   });
 
   const memoizedValue = useMemo(

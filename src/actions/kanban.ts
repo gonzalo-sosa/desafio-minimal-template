@@ -1,9 +1,9 @@
-import type { SWRConfiguration } from 'swr';
 import type { UniqueIdentifier } from '@dnd-kit/core';
+import type { QueryFilters } from '@tanstack/react-query';
 import type { IKanban, IKanbanTask, IKanbanColumn } from 'src/types/kanban';
 
-import useSWR, { mutate } from 'swr';
-import { useMemo, startTransition } from 'react';
+import { useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import axios, { fetcher, endpoints } from 'src/lib/axios';
 
@@ -13,10 +13,11 @@ const enableServer = false;
 
 const KANBAN_ENDPOINT = endpoints.kanban;
 
-const swrOptions: SWRConfiguration = {
-  revalidateIfStale: enableServer,
-  revalidateOnFocus: enableServer,
-  revalidateOnReconnect: enableServer,
+// TODO: añadir types de useQuery
+const queryOptions = {
+  refetchOnWindowFocus: enableServer,
+  refetchOnMount: enableServer,
+  refetchOnReconnect: enableServer,
 };
 
 // ----------------------------------------------------------------------
@@ -26,11 +27,16 @@ type BoardData = {
 };
 
 export function useGetBoard() {
-  const { data, isLoading, error, isValidating } = useSWR<BoardData>(
-    KANBAN_ENDPOINT,
-    fetcher,
-    swrOptions
-  );
+  const {
+    data,
+    isLoading,
+    error,
+    isFetching: isValidating,
+  } = useQuery<BoardData>({
+    queryKey: ['board'],
+    queryFn: () => fetcher<BoardData>(KANBAN_ENDPOINT),
+    ...queryOptions,
+  });
 
   const memoizedValue = useMemo(() => {
     const tasks = data?.board.tasks ?? {};
@@ -48,297 +54,327 @@ export function useGetBoard() {
   return memoizedValue;
 }
 
-// ----------------------------------------------------------------------
+// #region useKanbanMutations
 
-export async function createColumn(columnData: IKanbanColumn) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { columnData };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'create-column' } });
-  }
+export function useKanbanMutations() {
+  const queryClient = useQueryClient();
 
-  /**
-   * Work in local
-   */
-  mutate(
-    KANBAN_ENDPOINT,
-    (currentData) => {
-      const { board } = currentData as BoardData;
-
-      // add new column in board.columns
-      const columns = [...board.columns, columnData];
-
-      // add new task in board.tasks
-      const tasks = { ...board.tasks, [columnData.id]: [] };
-
-      return { ...currentData, board: { ...board, columns, tasks } };
-    },
-    false
-  );
-}
-
-// ----------------------------------------------------------------------
-
-export async function updateColumn(columnId: UniqueIdentifier, columnName: string) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { columnId, columnName };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'update-column' } });
-  }
-
-  /**
-   * Work in local
-   */
-  startTransition(() => {
-    mutate(
-      KANBAN_ENDPOINT,
-      (currentData) => {
-        const { board } = currentData as BoardData;
-
-        const columns = board.columns.map((column) =>
-          column.id === columnId
-            ? {
-                // Update data when found
-                ...column,
-                name: columnName,
-              }
-            : column
+  const createColumnMutation = useMutation({
+    mutationFn: async (columnData: IKanbanColumn) => {
+      if (enableServer) {
+        const response = await axios.post<{ column: IKanbanColumn }>(
+          KANBAN_ENDPOINT,
+          { columnData },
+          { params: { endpoint: 'create-column' } }
         );
 
-        return { ...currentData, board: { ...board, columns } };
-      },
-      false
-    );
-  });
-}
+        return response.data.column;
+      }
 
-// ----------------------------------------------------------------------
-
-export async function moveColumn(updateColumns: IKanbanColumn[]) {
-  /**
-   * Work in local
-   */
-  startTransition(() => {
-    mutate(
-      KANBAN_ENDPOINT,
-      (currentData) => {
-        const { board } = currentData as BoardData;
-
-        return { ...currentData, board: { ...board, columns: updateColumns } };
-      },
-      false
-    );
-  });
-
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { updateColumns };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'move-column' } });
-  }
-}
-
-// ----------------------------------------------------------------------
-
-export async function clearColumn(columnId: UniqueIdentifier) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { columnId };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'clear-column' } });
-  }
-
-  /**
-   * Work in local
-   */
-  startTransition(() => {
-    mutate(
-      KANBAN_ENDPOINT,
-      (currentData) => {
-        const { board } = currentData as BoardData;
-
-        // remove all tasks in column
-        const tasks = { ...board.tasks, [columnId]: [] };
-
-        return { ...currentData, board: { ...board, tasks } };
-      },
-      false
-    );
-  });
-}
-
-// ----------------------------------------------------------------------
-
-export async function deleteColumn(columnId: UniqueIdentifier) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { columnId };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'delete-column' } });
-  }
-
-  /**
-   * Work in local
-   */
-  mutate(
-    KANBAN_ENDPOINT,
-    (currentData) => {
-      const { board } = currentData as BoardData;
-
-      // delete column in board.columns
-      const columns = board.columns.filter((column) => column.id !== columnId);
-
-      // delete tasks by column deleted
-      const tasks = Object.keys(board.tasks)
-        .filter((key) => key !== columnId)
-        .reduce((obj: IKanban['tasks'], key) => {
-          obj[key] = board.tasks[key];
-          return obj;
-        }, {});
-
-      return { ...currentData, board: { ...board, columns, tasks } };
+      return columnData;
     },
-    false
-  );
-}
-
-// ----------------------------------------------------------------------
-
-export async function createTask(columnId: UniqueIdentifier, taskData: IKanbanTask) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { columnId, taskData };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'create-task' } });
-  }
-
-  /**
-   * Work in local
-   */
-  startTransition(() => {
-    mutate(
-      KANBAN_ENDPOINT,
-      (currentData) => {
-        const { board } = currentData as BoardData;
-
-        // add task in board.tasks
-        const tasks = { ...board.tasks, [columnId]: [taskData, ...board.tasks[columnId]] };
-
-        return { ...currentData, board: { ...board, tasks } };
-      },
-      false
-    );
+    onSuccess: (serverColumn) => {
+      queryClient.setQueryData<BoardData>(['board'], (old) => {
+        const board = old?.board ?? { columns: [], tasks: {} };
+        return {
+          board: {
+            columns: [...board.columns, serverColumn],
+            tasks: { ...board.tasks, [serverColumn.id]: [] },
+          },
+        };
+      });
+    },
   });
-}
 
-// ----------------------------------------------------------------------
-
-export async function updateTask(columnId: UniqueIdentifier, taskData: IKanbanTask) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { columnId, taskData };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'update-task' } });
-  }
-
-  /**
-   * Work in local
-   */
-  startTransition(() => {
-    mutate(
-      KANBAN_ENDPOINT,
-      (currentData) => {
-        const { board } = currentData as BoardData;
-
-        // tasks in column
-        const tasksInColumn = board.tasks[columnId];
-
-        // find and update task
-        const updateTasks = tasksInColumn.map((task) =>
-          task.id === taskData.id
-            ? {
-                // Update data when found
-                ...task,
-                ...taskData,
-              }
-            : task
+  const updateColumnMutation = useMutation({
+    mutationFn: async ({
+      columnId,
+      columnName,
+    }: {
+      columnId: UniqueIdentifier;
+      columnName: string;
+    }) => {
+      if (enableServer) {
+        await axios.post(
+          KANBAN_ENDPOINT,
+          { columnId, columnName },
+          {
+            params: { endpoint: 'update-column' },
+          }
         );
-
-        const tasks = { ...board.tasks, [columnId]: updateTasks };
-
-        return { ...currentData, board: { ...board, tasks } };
-      },
-      false
-    );
-  });
-}
-
-// ----------------------------------------------------------------------
-
-export async function moveTask(updateTasks: IKanban['tasks']) {
-  /**
-   * Work in local
-   */
-  startTransition(() => {
-    mutate(
-      KANBAN_ENDPOINT,
-      (currentData) => {
-        const { board } = currentData as BoardData;
-
-        // update board.tasks
-        const tasks = updateTasks;
-
-        return { ...currentData, board: { ...board, tasks } };
-      },
-      false
-    );
-  });
-
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { updateTasks };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'move-task' } });
-  }
-}
-
-// ----------------------------------------------------------------------
-
-export async function deleteTask(columnId: UniqueIdentifier, taskId: UniqueIdentifier) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { columnId, taskId };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'delete-task' } });
-  }
-
-  /**
-   * Work in local
-   */
-  mutate(
-    KANBAN_ENDPOINT,
-    (currentData) => {
-      const { board } = currentData as BoardData;
-
-      // delete task in column
-      const tasks = {
-        ...board.tasks,
-        [columnId]: board.tasks[columnId].filter((task) => task.id !== taskId),
-      };
-
-      return { ...currentData, board: { ...board, tasks } };
+      }
+      return { columnId, columnName };
     },
-    false
-  );
+    onSuccess: ({ columnId, columnName }) => {
+      queryClient.setQueryData<BoardData>(['board'], (old) => {
+        const board = old?.board ?? { columns: [], tasks: {} };
+        return {
+          board: {
+            ...board,
+            columns: board.columns.map((col) =>
+              col.id === columnId ? { ...col, name: columnName } : col
+            ),
+          },
+        };
+      });
+    },
+  });
+
+  const moveColumnMutation = useMutation({
+    mutationFn: async (updateColumns: IKanbanColumn[]) => {
+      if (enableServer) {
+        await axios.post(
+          KANBAN_ENDPOINT,
+          { updateColumns },
+          {
+            params: { endpoint: 'move-column' },
+          }
+        );
+      }
+      return updateColumns;
+    },
+    onSuccess: (updateColumns) => {
+      queryClient.setQueryData<BoardData>(['board'], (old) => {
+        if (!old)
+          return {
+            board: {
+              columns: [],
+              tasks: {},
+            },
+          };
+
+        return {
+          board: { ...old.board, columns: updateColumns },
+        };
+      });
+    },
+  });
+
+  const clearColumnMutation = useMutation({
+    mutationFn: async (columnId: UniqueIdentifier) => {
+      if (enableServer) {
+        await axios.post(
+          KANBAN_ENDPOINT,
+          { columnId },
+          {
+            params: { endpoint: 'clear-column' },
+          }
+        );
+      }
+      return columnId;
+    },
+    onSuccess: (columnId) => {
+      queryClient.setQueryData<BoardData>(['board'], (old) => {
+        const board = old?.board ?? { columns: [], tasks: {} };
+        return {
+          board: {
+            ...board,
+            tasks: { ...board.tasks, [columnId]: [] },
+          },
+        };
+      });
+    },
+  });
+
+  const deleteColumnMutation = useMutation({
+    mutationFn: async (columnId: UniqueIdentifier) => {
+      if (enableServer) {
+        await axios.post(
+          KANBAN_ENDPOINT,
+          { columnId },
+          {
+            params: { endpoint: 'delete-column' },
+          }
+        );
+      }
+      return columnId;
+    },
+    onSuccess: (columnId) => {
+      queryClient.setQueryData<BoardData>(['board'], (old) => {
+        const board = old?.board ?? { columns: [], tasks: {} };
+        const columns = board.columns.filter((col) => col.id !== columnId);
+        const tasks = Object.keys(board.tasks)
+          .filter((key) => key !== columnId)
+          .reduce((obj: IKanban['tasks'], key) => {
+            obj[key] = board.tasks[key];
+            return obj;
+          }, {});
+
+        return { board: { columns, tasks } };
+      });
+    },
+  });
+
+  const createTaskMutation = useMutation({
+    mutationFn: async ({
+      columnId,
+      taskData,
+    }: {
+      columnId: UniqueIdentifier;
+      taskData: IKanbanTask;
+    }) => {
+      if (enableServer) {
+        const response = await axios.post<{ task: IKanbanTask }>(
+          KANBAN_ENDPOINT,
+          { columnId, taskData },
+          { params: { endpoint: 'create-task' } }
+        );
+        return { columnId, taskData: response.data.task };
+      }
+      return { columnId, taskData };
+    },
+    onMutate: async ({ columnId, taskData }) => {
+      await queryClient.cancelQueries(['board'] as QueryFilters);
+
+      const previousBoard = queryClient.getQueryData<BoardData>(['board']);
+
+      // Actualización optimista
+      queryClient.setQueryData<BoardData>(['board'], (old) => {
+        const board = old?.board ?? { columns: [], tasks: {} };
+        return {
+          board: {
+            ...board,
+            tasks: {
+              ...board.tasks,
+              [columnId]: [taskData, ...(board.tasks[columnId] || [])],
+            },
+          },
+        };
+      });
+
+      return { previousBoard };
+    },
+    onError: (err, variables, context) => {
+      queryClient.setQueryData(['board'], context?.previousBoard);
+    },
+    onSuccess: ({ columnId, taskData }) => {
+      // Confirmar datos si es necesario
+    },
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({
+      columnId,
+      taskData,
+    }: {
+      columnId: UniqueIdentifier;
+      taskData: IKanbanTask;
+    }) => {
+      if (enableServer) {
+        await axios.post(
+          KANBAN_ENDPOINT,
+          { columnId, taskData },
+          {
+            params: { endpoint: 'update-task' },
+          }
+        );
+      }
+      return { columnId, taskData };
+    },
+    onSuccess: ({ columnId, taskData }) => {
+      queryClient.setQueryData<BoardData>(['board'], (old) => {
+        const board = old?.board ?? { columns: [], tasks: {} };
+        return {
+          board: {
+            ...board,
+            tasks: {
+              ...board.tasks,
+              [columnId]: board.tasks[columnId].map((task) =>
+                task.id === taskData.id ? taskData : task
+              ),
+            },
+          },
+        };
+      });
+    },
+  });
+
+  const moveTaskMutation = useMutation({
+    mutationFn: async (updateTasks: IKanban['tasks']) => {
+      if (enableServer) {
+        await axios.post(
+          KANBAN_ENDPOINT,
+          { updateTasks },
+          {
+            params: { endpoint: 'move-task' },
+          }
+        );
+      }
+      return updateTasks;
+    },
+    onSuccess: (updateTasks) => {
+      queryClient.setQueryData<BoardData>(['board'], (old) => {
+        if (!old)
+          return {
+            board: { columns: [], tasks: {} },
+          };
+
+        return {
+          board: { ...old.board, tasks: updateTasks },
+        };
+      });
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async ({
+      columnId,
+      taskId,
+    }: {
+      columnId: UniqueIdentifier;
+      taskId: UniqueIdentifier;
+    }) => {
+      if (enableServer) {
+        await axios.post(
+          KANBAN_ENDPOINT,
+          { columnId, taskId },
+          {
+            params: { endpoint: 'delete-task' },
+          }
+        );
+      }
+      return { columnId, taskId };
+    },
+    onSuccess: ({ columnId, taskId }) => {
+      queryClient.setQueryData<BoardData>(['board'], (old) => {
+        const board = old?.board ?? { columns: [], tasks: {} };
+        return {
+          board: {
+            ...board,
+            tasks: {
+              ...board.tasks,
+              [columnId]: board.tasks[columnId].filter((task) => task.id !== taskId),
+            },
+          },
+        };
+      });
+    },
+  });
+
+  return {
+    columnMutation: {
+      createColumn: createColumnMutation.mutateAsync,
+      updateColumn: updateColumnMutation.mutateAsync,
+      moveColumn: moveColumnMutation.mutateAsync,
+      clearColumn: clearColumnMutation.mutateAsync,
+      deleteColumn: deleteColumnMutation.mutateAsync,
+      isCreatingColumn: createColumnMutation.isPending,
+      isUpdatingColumn: updateColumnMutation.isPending,
+      isMovingColumn: moveColumnMutation.isPending,
+      isClearingColumn: clearColumnMutation.isPending,
+      isDeletingColumn: deleteColumnMutation.isPending,
+    },
+    taskMutation: {
+      createTask: createTaskMutation.mutateAsync,
+      updateTask: updateTaskMutation.mutateAsync,
+      moveTask: moveTaskMutation.mutateAsync,
+      deleteTask: deleteTaskMutation.mutateAsync,
+      isCreatingTask: createTaskMutation.isPending,
+      isUpdatingTask: updateTaskMutation.isPending,
+      isMovingTask: moveTaskMutation.isPending,
+      isDeletingTask: deleteTaskMutation.isPending,
+    },
+  };
 }
+
+// #endregion
