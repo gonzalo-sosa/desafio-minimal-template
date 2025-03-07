@@ -1,7 +1,7 @@
 import type { TextFieldProps } from '@mui/material/TextField';
 
-import { transformValue, transformValueOnBlur, transformValueOnChange } from 'minimal-shared/utils';
 import { Controller, useFormContext } from 'react-hook-form';
+import { transformValue, transformValueOnBlur, transformValueOnChange } from 'minimal-shared/utils';
 
 import TextField from '@mui/material/TextField';
 
@@ -18,7 +18,7 @@ export function RHFTextField({
   type = 'text',
   ...other
 }: RHFTextFieldProps) {
-  const { control } = useFormContext(); // comprobación de si estamos dentro de form provider
+  const { control } = useFormContext();
 
   const isNumberType = type === 'number';
 
@@ -38,7 +38,6 @@ export function RHFTextField({
 
             field.onChange(transformedValue);
           }}
-          // realiza validación cuando se hace un tab o se pierde el focus del input
           onBlur={(event) => {
             const transformedValue = isNumberType
               ? transformValueOnBlur(event.target.value)
@@ -47,7 +46,7 @@ export function RHFTextField({
             field.onChange(transformedValue);
           }}
           type={isNumberType ? 'text' : type}
-          error={!!error} // convierte a boolean
+          error={!!error}
           helperText={error?.message ?? helperText}
           slotProps={{
             ...slotProps,

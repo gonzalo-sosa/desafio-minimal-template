@@ -113,17 +113,6 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
     />
   );
 
-  const renderRtl = () => (
-    <BaseOption
-      label="Right to left"
-      icon="align-right"
-      selected={settings.state.direction === 'rtl'}
-      onChangeOption={() =>
-        settings.setState({ direction: settings.state.direction === 'ltr' ? 'rtl' : 'ltr' })
-      }
-    />
-  );
-
   const renderCompact = () => (
     <BaseOption
       tooltip="Dashboard only and available at large resolutions > 1600px (xl)"
@@ -254,7 +243,6 @@ export function SettingsDrawer({ sx, defaultSettings }: SettingsDrawerProps) {
           <Box sx={{ gap: 2, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)' }}>
             {isColorSchemeVisible && renderMode()}
             {isContrastVisible && renderContrast()}
-            {isDirectionVisible && renderRtl()}
             {isCompactLayoutVisible && renderCompact()}
           </Box>
 

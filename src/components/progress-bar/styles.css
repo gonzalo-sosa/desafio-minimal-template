@@ -20,7 +20,5 @@
   display: block;
   position: absolute;
   transform: rotate(3deg) translate(0px, -4px);
-  box-shadow:
-    0 0 10px var(--palette-primary-main),
-    0 0 5px var(--palette-primary-main);
+  box-shadow: 0 0 10px var(--palette-primary-main), 0 0 5px var(--palette-primary-main);
 }
