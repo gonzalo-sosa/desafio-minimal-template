@@ -1,9 +1,9 @@
-import type { CSSObject, SxProps, Theme } from '@mui/material/styles';
+import type { Theme, SxProps, CSSObject } from '@mui/material/styles';
 
 import { mergeClasses } from 'minimal-shared/utils';
 
-import GlobalStyles from '@mui/material/GlobalStyles';
 import { styled } from '@mui/material/styles';
+import GlobalStyles from '@mui/material/GlobalStyles';
 
 import { layoutClasses } from './classes';
 import { layoutSectionVars } from './css-vars';

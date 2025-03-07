@@ -1,4 +1,5 @@
 import type { BoxProps } from '@mui/material/Box';
+import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from 'src/components/nav-section';
 
 import parse from 'autosuggest-highlight/parse';
@@ -11,11 +12,12 @@ import Box from '@mui/material/Box';
 import SvgIcon from '@mui/material/SvgIcon';
 import MenuList from '@mui/material/MenuList';
 import { useTheme } from '@mui/material/styles';
-import InputBase from '@mui/material/InputBase';
 import IconButton from '@mui/material/IconButton';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import InputAdornment from '@mui/material/InputAdornment';
 import Dialog, { dialogClasses } from '@mui/material/Dialog';
 import MenuItem, { menuItemClasses } from '@mui/material/MenuItem';
+import InputBase, { inputBaseClasses } from '@mui/material/InputBase';
 
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
@@ -31,8 +33,11 @@ export type SearchbarProps = BoxProps & {
   data?: NavSectionProps['data'];
 };
 
+const breakpoint: Breakpoint = 'sm';
+
 export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps) {
   const theme = useTheme();
+  const smUp = useMediaQuery(theme.breakpoints.up(breakpoint));
 
   const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,7 +49,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (event.key === 'k' && event.metaKey) {
+      if (event.metaKey && event.key.toLowerCase() === 'k') {
         onToggle();
         setSearchQuery('');
       }
@@ -77,28 +82,37 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
     <Box
       onClick={onOpen}
       sx={[
-        () => ({
+        {
           display: 'flex',
           alignItems: 'center',
-          pr: { sm: 1 },
-          borderRadius: { sm: 1.5 },
-          cursor: { sm: 'pointer' },
-          bgcolor: { sm: varAlpha(theme.vars.palette.grey['500Channel'], 0.08) },
-          transition: theme.transitions.create('background-color', {
-            easing: theme.transitions.easing.easeInOut,
-            duration: theme.transitions.duration.shortest,
-          }),
-          '&:hover': {
-            bgcolor: {
-              sm: varAlpha(theme.vars.palette.grey['500Channel'], 0.16),
+          [theme.breakpoints.up(breakpoint)]: {
+            pr: 1,
+            borderRadius: 1.5,
+            cursor: 'pointer',
+            bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
+            transition: theme.transitions.create('background-color', {
+              easing: theme.transitions.easing.easeInOut,
+              duration: theme.transitions.duration.shortest,
+            }),
+            '&:hover': {
+              bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.16),
             },
           },
-        }),
+        },
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
       {...other}
     >
-      <IconButton disableRipple>
+      <Box
+        component={smUp ? 'span' : IconButton}
+        sx={{
+          [theme.breakpoints.up(breakpoint)]: {
+            p: 1,
+            display: 'inline-flex',
+            color: 'action.active',
+          },
+        }}
+      >
         {/* https://icon-sets.iconify.design/eva/search-fill/ */}
         <SvgIcon sx={{ width: 20, height: 20 }}>
           <path
@@ -106,7 +120,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
             d="m20.71 19.29l-3.4-3.39A7.92 7.92 0 0 0 19 11a8 8 0 1 0-8 8a7.92 7.92 0 0 0 4.9-1.69l3.39 3.4a1 1 0 0 0 1.42 0a1 1 0 0 0 0-1.42M5 11a6 6 0 1 1 6 6a6 6 0 0 1-6-6"
           />
         </SvgIcon>
-      </IconButton>
+      </Box>
 
       <Label
         sx={{
@@ -115,7 +129,7 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
           bgcolor: 'common.white',
           fontSize: theme.typography.pxToRem(12),
           boxShadow: theme.vars.customShadows.z1,
-          display: { xs: 'none', sm: 'inline-flex' },
+          display: { xs: 'none', [breakpoint]: 'inline-flex' },
         }}
       >
         ⌘K
@@ -163,46 +177,38 @@ export function Searchbar({ data: navItems = [], sx, ...other }: SearchbarProps)
         maxWidth="sm"
         open={open}
         onClose={handleClose}
-        transitionDuration={{ enter: theme.transitions.duration.shortest, exit: 0 }}
-        PaperProps={{ sx: { mt: 15, overflow: 'unset' } }}
+        transitionDuration={{ enter: theme.transitions.duration.shortest, exit: 100 }}
         sx={[
-          () => ({
-            [`& .${dialogClasses.container}`]: {
-              alignItems: 'flex-start',
-            },
-          }),
+          {
+            [`& .${dialogClasses.paper}`]: { mt: 15, overflow: 'unset' },
+            [`& .${dialogClasses.container}`]: { alignItems: 'flex-start' },
+          },
         ]}
       >
-        <Box sx={{ p: 3, borderBottom: `solid 1px ${theme.vars.palette.divider}` }}>
-          <InputBase
-            fullWidth
-            autoFocus={open}
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={handleSearch}
-            startAdornment={
-              <InputAdornment position="start">
-                <Iconify icon="eva:search-fill" width={24} sx={{ color: 'text.disabled' }} />
-              </InputAdornment>
-            }
-            endAdornment={<Label sx={{ letterSpacing: 1, color: 'text.secondary' }}>esc</Label>}
-            inputProps={{ id: 'search-input', sx: { typography: 'h6' } }}
-          />
-        </Box>
+        <InputBase
+          fullWidth
+          autoFocus={open}
+          placeholder="Search..."
+          value={searchQuery}
+          onChange={handleSearch}
+          startAdornment={
+            <InputAdornment position="start">
+              <Iconify icon="eva:search-fill" width={24} sx={{ color: 'text.disabled' }} />
+            </InputAdornment>
+          }
+          endAdornment={<Label sx={{ letterSpacing: 1, color: 'text.secondary' }}>esc</Label>}
+          inputProps={{ id: 'search-input' }}
+          sx={{
+            p: 3,
+            borderBottom: `solid 1px ${theme.vars.palette.divider}`,
+            [`& .${inputBaseClasses.input}`]: { typography: 'h6' },
+          }}
+        />
 
         {notFound ? (
-          <SearchNotFound query={searchQuery} sx={{ py: 15 }} />
+          <SearchNotFound query={searchQuery} sx={{ py: 15, px: 2.5 }} />
         ) : (
-          <Scrollbar
-            sx={{
-              px: 3,
-              pb: 3,
-              pt: 2,
-              height: 400,
-            }}
-          >
-            {renderList()}
-          </Scrollbar>
+          <Scrollbar sx={{ p: 2.5, height: 400 }}>{renderList()}</Scrollbar>
         )}
       </Dialog>
     </>

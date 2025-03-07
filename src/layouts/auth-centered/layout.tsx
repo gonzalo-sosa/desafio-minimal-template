@@ -1,4 +1,4 @@
-import type { Breakpoint } from '@mui/material/styles';
+import type { Theme, CSSObject, Breakpoint } from '@mui/material/styles';
 
 import { merge } from 'es-toolkit';
 
@@ -9,15 +9,17 @@ import Alert from '@mui/material/Alert';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
+import { CONFIG } from 'src/global-config';
+
 import { Logo } from 'src/components/logo';
 
-import { SimpleCompactContent } from './content';
+import { AuthCenteredContent } from './content';
 import { MainSection } from '../core/main-section';
 import { LayoutSection } from '../core/layout-section';
 import { HeaderSection } from '../core/header-section';
 import { SettingsButton } from '../components/settings-button';
 
-import type { SimpleCompactContentProps } from './content';
+import type { AuthCenteredContentProps } from './content';
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
 import type { LayoutSectionProps } from '../core/layout-section';
@@ -26,22 +28,22 @@ import type { LayoutSectionProps } from '../core/layout-section';
 
 type LayoutBaseProps = Pick<LayoutSectionProps, 'sx' | 'children' | 'cssVars'>;
 
-export type SimpleLayoutProps = LayoutBaseProps & {
+export type AuthCenteredLayoutProps = LayoutBaseProps & {
   layoutQuery?: Breakpoint;
   slotProps?: {
     header?: HeaderSectionProps;
     main?: MainSectionProps;
-    content?: SimpleCompactContentProps & { compact?: boolean };
+    content?: AuthCenteredContentProps;
   };
 };
 
-export function SimpleLayout({
+export function AuthCenteredLayout({
   sx,
   cssVars,
   children,
   slotProps,
   layoutQuery = 'md',
-}: SimpleLayoutProps) {
+}: AuthCenteredLayoutProps) {
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = { container: { maxWidth: false } };
 
@@ -51,7 +53,12 @@ export function SimpleLayout({
           This is an info Alert.
         </Alert>
       ),
-      leftArea: <Logo />,
+      leftArea: (
+        <>
+          {/** @slot Logo */}
+          <Logo />
+        </>
+      ),
       rightArea: (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
           {/** @slot Help link */}
@@ -72,32 +79,43 @@ export function SimpleLayout({
 
     return (
       <HeaderSection
+        disableElevation
         layoutQuery={layoutQuery}
         {...slotProps?.header}
         slots={{ ...headerSlots, ...slotProps?.header?.slots }}
         slotProps={merge(headerSlotProps, slotProps?.header?.slotProps ?? {})}
-        sx={slotProps?.header?.sx}
+        sx={[
+          { position: { [layoutQuery]: 'fixed' } },
+          ...(Array.isArray(slotProps?.header?.sx)
+            ? (slotProps?.header?.sx ?? [])
+            : [slotProps?.header?.sx]),
+        ]}
       />
     );
   };
 
   const renderFooter = () => null;
 
-  const renderMain = () => {
-    const { compact, ...restContentProps } = slotProps?.content ?? {};
-
-    return (
-      <MainSection {...slotProps?.main}>
-        {compact ? (
-          <SimpleCompactContent layoutQuery={layoutQuery} {...restContentProps}>
-            {children}
-          </SimpleCompactContent>
-        ) : (
-          children
-        )}
-      </MainSection>
-    );
-  };
+  const renderMain = () => (
+    <MainSection
+      {...slotProps?.main}
+      sx={[
+        (theme) => ({
+          alignItems: 'center',
+          p: theme.spacing(3, 2, 10, 2),
+          [theme.breakpoints.up(layoutQuery)]: {
+            justifyContent: 'center',
+            p: theme.spacing(10, 0, 10, 0),
+          },
+        }),
+        ...(Array.isArray(slotProps?.main?.sx)
+          ? (slotProps?.main?.sx ?? [])
+          : [slotProps?.main?.sx]),
+      ]}
+    >
+      <AuthCenteredContent {...slotProps?.content}>{children}</AuthCenteredContent>
+    </MainSection>
+  );
 
   return (
     <LayoutSection
@@ -112,10 +130,33 @@ export function SimpleLayout({
       /** **************************************
        * @Styles
        *************************************** */
-      cssVars={{ '--layout-simple-content-compact-width': '448px', ...cssVars }}
-      sx={sx}
+      cssVars={{ '--layout-auth-content-width': '420px', ...cssVars }}
+      sx={[
+        (theme) => ({
+          position: 'relative',
+          '&::before': backgroundStyles(theme),
+        }),
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
     >
       {renderMain()}
     </LayoutSection>
   );
 }
+
+// ----------------------------------------------------------------------
+
+const backgroundStyles = (theme: Theme): CSSObject => ({
+  ...theme.mixins.bgGradient({
+    images: [`url(${CONFIG.assetsDir}/assets/background/background-3-blur.webp)`],
+  }),
+  zIndex: 1,
+  opacity: 0.24,
+  width: '100%',
+  height: '100%',
+  content: "''",
+  position: 'absolute',
+  ...theme.applyStyles('dark', {
+    opacity: 0.08,
+  }),
+});
