@@ -125,74 +125,76 @@ const shouldForwardProp = (prop: string) =>
 /**
  * @slot root
  */
-const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(
-  ({ active, open, theme }) => {
-    const bulletSvg = `"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' viewBox='0 0 14 14'%3E%3Cpath d='M1 1v4a8 8 0 0 0 8 8h4' stroke='%23efefef' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"`;
+const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({
+  active,
+  open,
+  theme,
+}) => {
+  const bulletSvg = `"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' viewBox='0 0 14 14'%3E%3Cpath d='M1 1v4a8 8 0 0 0 8 8h4' stroke='%23efefef' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"`;
 
-    const bulletStyles: CSSObject = {
-      left: 0,
-      content: '""',
-      position: 'absolute',
-      width: 'var(--nav-bullet-size)',
-      height: 'var(--nav-bullet-size)',
-      backgroundColor: 'var(--nav-bullet-light-color)',
-      mask: `url(${bulletSvg}) no-repeat 50% 50%/100% auto`,
-      WebkitMask: `url(${bulletSvg}) no-repeat 50% 50%/100% auto`,
-      transform:
-        theme.direction === 'rtl'
-          ? 'translate(calc(var(--nav-bullet-size) * 1), calc(var(--nav-bullet-size) * -0.4)) scaleX(-1)'
-          : 'translate(calc(var(--nav-bullet-size) * -1), calc(var(--nav-bullet-size) * -0.4))',
+  const bulletStyles: CSSObject = {
+    left: 0,
+    content: '""',
+    position: 'absolute',
+    width: 'var(--nav-bullet-size)',
+    height: 'var(--nav-bullet-size)',
+    backgroundColor: 'var(--nav-bullet-light-color)',
+    mask: `url(${bulletSvg}) no-repeat 50% 50%/100% auto`,
+    WebkitMask: `url(${bulletSvg}) no-repeat 50% 50%/100% auto`,
+    transform:
+      theme.direction === 'rtl'
+        ? 'translate(calc(var(--nav-bullet-size) * 1), calc(var(--nav-bullet-size) * -0.4)) scaleX(-1)'
+        : 'translate(calc(var(--nav-bullet-size) * -1), calc(var(--nav-bullet-size) * -0.4))',
+    ...theme.applyStyles('dark', {
+      backgroundColor: 'var(--nav-bullet-dark-color)',
+    }),
+  };
+
+  const rootItemStyles: CSSObject = {
+    minHeight: 'var(--nav-item-root-height)',
+    ...(open && {
+      color: 'var(--nav-item-root-open-color)',
+      backgroundColor: 'var(--nav-item-root-open-bg)',
+    }),
+    ...(active && {
+      color: 'var(--nav-item-root-active-color)',
+      backgroundColor: 'var(--nav-item-root-active-bg)',
+      '&:hover': { backgroundColor: 'var(--nav-item-root-active-hover-bg)' },
       ...theme.applyStyles('dark', {
-        backgroundColor: 'var(--nav-bullet-dark-color)',
+        color: 'var(--nav-item-root-active-color-on-dark)',
       }),
-    };
+    }),
+  };
 
-    const rootItemStyles: CSSObject = {
-      minHeight: 'var(--nav-item-root-height)',
-      ...(open && {
-        color: 'var(--nav-item-root-open-color)',
-        backgroundColor: 'var(--nav-item-root-open-bg)',
-      }),
-      ...(active && {
-        color: 'var(--nav-item-root-active-color)',
-        backgroundColor: 'var(--nav-item-root-active-bg)',
-        '&:hover': { backgroundColor: 'var(--nav-item-root-active-hover-bg)' },
-        ...theme.applyStyles('dark', {
-          color: 'var(--nav-item-root-active-color-on-dark)',
-        }),
-      }),
-    };
+  const subItemStyles: CSSObject = {
+    minHeight: 'var(--nav-item-sub-height)',
+    '&::before': bulletStyles,
+    ...(open && {
+      color: 'var(--nav-item-sub-open-color)',
+      backgroundColor: 'var(--nav-item-sub-open-bg)',
+    }),
+    ...(active && {
+      color: 'var(--nav-item-sub-active-color)',
+      backgroundColor: 'var(--nav-item-sub-active-bg)',
+    }),
+  };
 
-    const subItemStyles: CSSObject = {
-      minHeight: 'var(--nav-item-sub-height)',
-      '&::before': bulletStyles,
-      ...(open && {
-        color: 'var(--nav-item-sub-open-color)',
-        backgroundColor: 'var(--nav-item-sub-open-bg)',
-      }),
-      ...(active && {
-        color: 'var(--nav-item-sub-active-color)',
-        backgroundColor: 'var(--nav-item-sub-active-bg)',
-      }),
-    };
-
-    return {
-      width: '100%',
-      paddingTop: 'var(--nav-item-pt)',
-      paddingLeft: 'var(--nav-item-pl)',
-      paddingRight: 'var(--nav-item-pr)',
-      paddingBottom: 'var(--nav-item-pb)',
-      borderRadius: 'var(--nav-item-radius)',
-      color: 'var(--nav-item-color)',
-      '&:hover': { backgroundColor: 'var(--nav-item-hover-bg)' },
-      variants: [
-        { props: { variant: 'rootItem' }, style: rootItemStyles },
-        { props: { variant: 'subItem' }, style: subItemStyles },
-        { props: { disabled: true }, style: navItemStyles.disabled },
-      ],
-    };
-  }
-);
+  return {
+    width: '100%',
+    paddingTop: 'var(--nav-item-pt)',
+    paddingLeft: 'var(--nav-item-pl)',
+    paddingRight: 'var(--nav-item-pr)',
+    paddingBottom: 'var(--nav-item-pb)',
+    borderRadius: 'var(--nav-item-radius)',
+    color: 'var(--nav-item-color)',
+    '&:hover': { backgroundColor: 'var(--nav-item-hover-bg)' },
+    variants: [
+      { props: { variant: 'rootItem' }, style: rootItemStyles },
+      { props: { variant: 'subItem' }, style: subItemStyles },
+      { props: { disabled: true }, style: navItemStyles.disabled },
+    ],
+  };
+});
 
 /**
  * @slot icon

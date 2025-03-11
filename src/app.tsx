@@ -11,6 +11,8 @@ import { MotionLazy } from 'src/components/animate/motion-lazy';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from 'src/components/settings';
 
 import { AuthProvider } from 'src/auth/context/jwt';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { LocalizationProvider } from './locales';
 
 // ----------------------------------------------------------------------
 
@@ -24,17 +26,19 @@ export default function App({ children }: AppProps) {
   return (
     <AuthProvider>
       <SettingsProvider defaultSettings={defaultSettings}>
-        <ThemeProvider
-          noSsr
-          defaultMode={themeConfig.defaultMode}
-          modeStorageKey={themeConfig.modeStorageKey}
-        >
-          <MotionLazy>
-            <ProgressBar />
-            <SettingsDrawer defaultSettings={defaultSettings} />
-            {children}
-          </MotionLazy>
-        </ThemeProvider>
+        <LocalizationProvider>
+          <ThemeProvider
+            noSsr
+            defaultMode={themeConfig.defaultMode}
+            modeStorageKey={themeConfig.modeStorageKey}
+          >
+            <MotionLazy>
+              <ProgressBar />
+              <SettingsDrawer defaultSettings={defaultSettings} />
+              <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+            </MotionLazy>
+          </ThemeProvider>
+        </LocalizationProvider>
       </SettingsProvider>
     </AuthProvider>
   );

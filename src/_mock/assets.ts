@@ -588,6 +588,16 @@ export const _fileNames = [
   'xl-david-blaine-component-tanzania-books.pdf',
 ];
 
+export const _flightNumbers = [
+  `LH1234`,
+  `KL5678`,
+  `BA9012`,
+  `AA3456`,
+  `EK7890`,
+  `QX2345`,
+  `AA6789`,
+];
+
 export const _eventNames = [
   `Annual General Meeting`,
   `Summer Music Festival`,

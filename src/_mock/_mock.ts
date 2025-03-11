@@ -31,6 +31,7 @@ import {
   _descriptions,
   _phoneNumbers,
   _countryNames,
+  _flightNumbers,
 } from './assets';
 
 // ----------------------------------------------------------------------
@@ -49,6 +50,7 @@ export const _mock = {
   jobTitle: (index: number) => _jobTitles[index],
   tourName: (index: number) => _tourNames[index],
   productName: (index: number) => _productNames[index],
+  flightNumber: (index: number) => _flightNumbers[index],
   sentence: (index: number) => _sentences[index],
   description: (index: number) => _descriptions[index],
   // Contact

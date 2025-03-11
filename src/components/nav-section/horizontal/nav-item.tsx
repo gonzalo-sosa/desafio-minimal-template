@@ -122,53 +122,55 @@ const shouldForwardProp = (prop: string) =>
 /**
  * @slot root
  */
-const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(
-  ({ active, open, theme }) => {
-    const rootItemStyles: CSSObject = {
-      padding: 'var(--nav-item-root-padding)',
-      minHeight: 'var(--nav-item-root-height)',
-      ...(open && {
-        color: 'var(--nav-item-root-open-color)',
-        backgroundColor: 'var(--nav-item-root-open-bg)',
+const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({
+  active,
+  open,
+  theme,
+}) => {
+  const rootItemStyles: CSSObject = {
+    padding: 'var(--nav-item-root-padding)',
+    minHeight: 'var(--nav-item-root-height)',
+    ...(open && {
+      color: 'var(--nav-item-root-open-color)',
+      backgroundColor: 'var(--nav-item-root-open-bg)',
+    }),
+    ...(active && {
+      color: 'var(--nav-item-root-active-color)',
+      backgroundColor: 'var(--nav-item-root-active-bg)',
+      '&:hover': { backgroundColor: 'var(--nav-item-root-active-hover-bg)' },
+      ...theme.applyStyles('dark', {
+        color: 'var(--nav-item-root-active-color-on-dark)',
       }),
-      ...(active && {
-        color: 'var(--nav-item-root-active-color)',
-        backgroundColor: 'var(--nav-item-root-active-bg)',
-        '&:hover': { backgroundColor: 'var(--nav-item-root-active-hover-bg)' },
-        ...theme.applyStyles('dark', {
-          color: 'var(--nav-item-root-active-color-on-dark)',
-        }),
-      }),
-    };
+    }),
+  };
 
-    const subItemStyles: CSSObject = {
-      padding: 'var(--nav-item-sub-padding)',
-      minHeight: 'var(--nav-item-sub-height)',
-      color: theme.vars.palette.text.secondary,
-      ...(open && {
-        color: 'var(--nav-item-sub-open-color)',
-        backgroundColor: 'var(--nav-item-sub-open-bg)',
-      }),
-      ...(active && {
-        color: 'var(--nav-item-sub-active-color)',
-        backgroundColor: 'var(--nav-item-sub-active-bg)',
-      }),
-    };
+  const subItemStyles: CSSObject = {
+    padding: 'var(--nav-item-sub-padding)',
+    minHeight: 'var(--nav-item-sub-height)',
+    color: theme.vars.palette.text.secondary,
+    ...(open && {
+      color: 'var(--nav-item-sub-open-color)',
+      backgroundColor: 'var(--nav-item-sub-open-bg)',
+    }),
+    ...(active && {
+      color: 'var(--nav-item-sub-active-color)',
+      backgroundColor: 'var(--nav-item-sub-active-bg)',
+    }),
+  };
 
-    return {
-      width: '100%',
-      flexShrink: 0,
-      color: 'var(--nav-item-color)',
-      borderRadius: 'var(--nav-item-radius)',
-      '&:hover': { backgroundColor: 'var(--nav-item-hover-bg)' },
-      variants: [
-        { props: { variant: 'rootItem' }, style: rootItemStyles },
-        { props: { variant: 'subItem' }, style: subItemStyles },
-        { props: { disabled: true }, style: navItemStyles.disabled },
-      ],
-    };
-  }
-);
+  return {
+    width: '100%',
+    flexShrink: 0,
+    color: 'var(--nav-item-color)',
+    borderRadius: 'var(--nav-item-radius)',
+    '&:hover': { backgroundColor: 'var(--nav-item-hover-bg)' },
+    variants: [
+      { props: { variant: 'rootItem' }, style: rootItemStyles },
+      { props: { variant: 'subItem' }, style: subItemStyles },
+      { props: { disabled: true }, style: navItemStyles.disabled },
+    ],
+  };
+});
 
 /**
  * @slot icon

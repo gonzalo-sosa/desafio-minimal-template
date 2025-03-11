@@ -16,6 +16,8 @@ export * from './_order';
 
 export * from './_others';
 
+export * from './_flight';
+
 export * from './_invoice';
 
 export * from './_product';

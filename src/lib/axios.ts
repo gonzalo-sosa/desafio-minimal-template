@@ -17,11 +17,11 @@ export default axiosInstance;
 
 // ----------------------------------------------------------------------
 
-export const fetcher = async (args: string | [string, AxiosRequestConfig]) => {
+export const fetcher = async <T>(args: string | [string, AxiosRequestConfig]): Promise<T> => {
   try {
     const [url, config] = Array.isArray(args) ? args : [args];
 
-    const res = await axiosInstance.get(url, { ...config });
+    const res = await axiosInstance.get<T>(url, { ...config });
 
     return res.data;
   } catch (error) {
@@ -56,5 +56,10 @@ export const endpoints = {
     list: '/api/product/list',
     details: '/api/product/details',
     search: '/api/product/search',
+  },
+  flight: {
+    list: '/api/flight/list',
+    details: '/api/flight/details',
+    search: '/api/flight/search',
   },
 };

@@ -38,7 +38,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     }
 
     if (!authenticated) {
-      const { method } = CONFIG.auth;
+      const { method } = CONFIG.auth as { method: keyof typeof signInPaths };
 
       const signInPath = signInPaths[method];
       const redirectPath = createRedirectPath(signInPath);

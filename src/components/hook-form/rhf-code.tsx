@@ -2,7 +2,6 @@ import type { BoxProps } from '@mui/material/Box';
 import type { MuiOtpInputProps } from 'mui-one-time-password-input';
 import type { FormHelperTextProps } from '@mui/material/FormHelperText';
 
-import * as React from 'react';
 import { MuiOtpInput } from 'mui-one-time-password-input';
 import { Controller, useFormContext } from 'react-hook-form';
 
@@ -10,7 +9,6 @@ import Box from '@mui/material/Box';
 import { inputBaseClasses } from '@mui/material/InputBase';
 
 import { HelperText } from './help-text';
-
 // ----------------------------------------------------------------------
 
 export interface RHFCodesProps extends Omit<MuiOtpInputProps, 'sx'> {

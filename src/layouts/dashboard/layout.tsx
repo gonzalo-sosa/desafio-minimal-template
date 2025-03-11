@@ -28,6 +28,7 @@ import { HeaderSection } from '../core/header-section';
 import { LayoutSection } from '../core/layout-section';
 import { AccountDrawer } from '../components/account-drawer';
 import { SettingsButton } from '../components/settings-button';
+import { LanguagePopover } from '../components/language-popover';
 import { ContactsPopover } from '../components/contacts-popover';
 import { WorkspacesPopover } from '../components/workspaces-popover';
 import { navData as dashboardNavData } from '../nav-config-dashboard';
@@ -125,7 +126,7 @@ export function DashboardLayout({
           {/** @slot Workspace popover */}
           <WorkspacesPopover
             data={_workspaces}
-            sx={{ ...(isNavHorizontal && { color: 'var(--layout-nav-text-primary-color)' }) }}
+            sx={{ color: 'var(--layout-nav-text-primary-color)' }}
           />
         </>
       ),
@@ -133,6 +134,17 @@ export function DashboardLayout({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.75 } }}>
           {/** @slot Searchbar */}
           <Searchbar data={navData} />
+
+          {/** @slot Language popover */}
+          <LanguagePopover
+            data={[
+              { value: 'en', label: 'English', countryCode: 'GB' },
+              { value: 'fr', label: 'French', countryCode: 'FR' },
+              { value: 'vi', label: 'Vietnamese', countryCode: 'VN' },
+              { value: 'cn', label: 'Chinese', countryCode: 'CN' },
+              { value: 'ar', label: 'Arabic', countryCode: 'SA' },
+            ]}
+          />
 
           {/** @slot Notifications popover */}
           <NotificationsDrawer data={_notifications} />

@@ -26,7 +26,7 @@
       "**/jsconfig.json"
     ]
   },
-  "organizeImports": { "enabled": true },
+  "organizeImports": { "enabled": false },
   "linter": {
     "enabled": true,
     "rules": {
@@ -38,6 +38,7 @@
         "noUselessCatch": "error",
         "noUselessFragments": "warn",
         "noUselessRename": "warn",
+        "noUselessThisAlias": "error",
         "noUselessTypeConstraint": "error",
         "noWith": "error"
       },
@@ -74,11 +75,14 @@
       },
       "security": { "noDangerouslySetInnerHtmlWithChildren": "error" },
       "style": {
+        "noImplicitBoolean": "off",
         "noNamespace": "error",
         "useAsConstAssertion": "error",
-        "useDefaultSwitchClause": "error"
+        "useDefaultSwitchClause": "error",
+        "useImportType": "warn"
       },
       "suspicious": {
+        "noAssignInExpressions": "error",
         "noAsyncPromiseExecutor": "error",
         "noCatchAssign": "error",
         "noClassAssign": "error",
@@ -91,8 +95,8 @@
         "noDuplicateJsxProps": "error",
         "noDuplicateObjectKeys": "error",
         "noDuplicateParameters": "error",
-        "noEmptyBlockStatements": "error",
-        "noExplicitAny": "error",
+        "noEmptyBlockStatements": "off",
+        "noExplicitAny": "warn",
         "noExtraNonNullAssertion": "error",
         "noFallthroughSwitchClause": "error",
         "noFunctionAssign": "error",
@@ -112,7 +116,22 @@
         "useValidTypeof": "error"
       }
     },
-    "ignore": ["*", "!src/", "eslint.config.*"]
+    "ignore": [
+      "build/*",
+      "dist/*",
+      "public/*",
+      "**/out/*",
+      "**/.next/*",
+      "**/node_modules/*",
+      "**/yarn.lock",
+      "**/pnpm-lock.yaml",
+      "**/bun.lock",
+      "**/package-lock.json",
+      "**/jsconfig.json",
+      "src/_mock",
+      "prettier.config.*",
+      "eslint.config.*"
+    ]
   },
   "javascript": {
     "formatter": {
@@ -271,11 +290,100 @@
             "noUnreachable": "off",
             "noUnreachableSuper": "off"
           },
-          "style": {
-            "noArguments": "error",
-            "noVar": "error",
-            "useConst": "error"
+          "style": { "noArguments": "error", "noVar": "error", "useConst": "error" },
+          "suspicious": {
+            "noClassAssign": "off",
+            "noDuplicateClassMembers": "off",
+            "noDuplicateObjectKeys": "off",
+            "noDuplicateParameters": "off",
+            "noFunctionAssign": "off",
+            "noImportAssign": "off",
+            "noRedeclare": "off",
+            "noUnsafeNegation": "off",
+            "useGetterReturn": "off"
+          }
+        }
+      }
+    },
+    { "include": ["**/*.{js,mjs,cjs,ts,jsx,tsx}"] },
+    {
+      "include": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noConstAssign": "off",
+            "noGlobalObjectCalls": "off",
+            "noInvalidBuiltinInstantiation": "off",
+            "noInvalidConstructorSuper": "off",
+            "noNewSymbol": "off",
+            "noSetterReturn": "off",
+            "noUndeclaredVariables": "off",
+            "noUnreachable": "off",
+            "noUnreachableSuper": "off"
           },
+          "style": { "noArguments": "error", "noVar": "error", "useConst": "error" },
+          "suspicious": {
+            "noClassAssign": "off",
+            "noDuplicateClassMembers": "off",
+            "noDuplicateObjectKeys": "off",
+            "noDuplicateParameters": "off",
+            "noFunctionAssign": "off",
+            "noImportAssign": "off",
+            "noRedeclare": "off",
+            "noUnsafeNegation": "off",
+            "useGetterReturn": "off"
+          }
+        }
+      }
+    },
+    { "include": ["**/*.{js,mjs,cjs,ts,jsx,tsx}"] },
+    {
+      "include": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noConstAssign": "off",
+            "noGlobalObjectCalls": "off",
+            "noInvalidBuiltinInstantiation": "off",
+            "noInvalidConstructorSuper": "off",
+            "noNewSymbol": "off",
+            "noSetterReturn": "off",
+            "noUndeclaredVariables": "off",
+            "noUnreachable": "off",
+            "noUnreachableSuper": "off"
+          },
+          "style": { "noArguments": "error", "noVar": "error", "useConst": "error" },
+          "suspicious": {
+            "noClassAssign": "off",
+            "noDuplicateClassMembers": "off",
+            "noDuplicateObjectKeys": "off",
+            "noDuplicateParameters": "off",
+            "noFunctionAssign": "off",
+            "noImportAssign": "off",
+            "noRedeclare": "off",
+            "noUnsafeNegation": "off",
+            "useGetterReturn": "off"
+          }
+        }
+      }
+    },
+    { "include": ["**/*.{js,mjs,cjs,ts,jsx,tsx}"] },
+    {
+      "include": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noConstAssign": "off",
+            "noGlobalObjectCalls": "off",
+            "noInvalidBuiltinInstantiation": "off",
+            "noInvalidConstructorSuper": "off",
+            "noNewSymbol": "off",
+            "noSetterReturn": "off",
+            "noUndeclaredVariables": "off",
+            "noUnreachable": "off",
+            "noUnreachableSuper": "off"
+          },
+          "style": { "noArguments": "error", "noVar": "error", "useConst": "error" },
           "suspicious": {
             "noClassAssign": "off",
             "noDuplicateClassMembers": "off",
